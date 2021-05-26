@@ -15,7 +15,7 @@ class BaseConfigBackupArgs:
 
 
 class BaseConfigBackup(ABC):
-    def __init__(self, base_config_backup_args: BaseConfigBackupArgs) -> None:
+    def __init__(self, base_config_backup_args: BaseConfigBackupArgs = None) -> None:
         super().__init__()
         self._base_config_backup_args = base_config_backup_args
 
@@ -50,13 +50,13 @@ class ConnectArgs:
     port: int
     timeout: int
     max_recv_time: int
-    error: str
 
 
 class Connect(BaseConfigBackup):
-    def __init__(self, connect_args: ConnectArgs) -> None:
+    def __init__(self, connect_args: ConnectArgs = None) -> None:
 
-        self._connect_args = connect_args
+        self.error: str = None
+        self.connect_args = connect_args
 
     @abstractmethod
     def connect(self):
@@ -69,23 +69,22 @@ class FortigateConnectArgs:
     username: str
     password: str
 
-    channel: Any
-    client: Callable
-
     vdom: str = "root"
 
 
 class FortigateConnect(Connect):
     def __init__(
         self,
-        fortigate_connect_args: FortigateConnectArgs = None,
+        forti_connect_args: FortigateConnectArgs = None,
         connect_args: ConnectArgs = None,
     ) -> None:
 
         # instanciate super/parent variables
         super().__init__(connect_args=connect_args)
 
-        self._fortigate_connect_args = fortigate_connect_args
+        self.forti_connect_args = forti_connect_args
+        self.channel = None
+        self.client = None
 
         self.client = self.connect()
 
@@ -96,23 +95,23 @@ class FortigateConnect(Connect):
             client.set_missing_host_key_policy(AutoAddPolicy())
 
             client.connect(
-                self._connect_args.host,
-                username=self._connect_args.username,
-                password=self._connect_args.password,
+                hostname=self.connect_args.host,
+                username=self.forti_connect_args.username,
+                password=self.forti_connect_args.password,
+                timeout=self.connect_args.timeout,
                 look_for_keys=True,
-                timeout=self._base_config_backup_args.timeout,
             )
 
             self.channel = client.invoke_shell()
 
             detectedDevice = (
-                self.channel.recv(len(self._connect_args.device_hostname) + 2)
+                self.channel.recv(len(self.connect_args.device_hostname) + 2)
                 .decode()
                 .strip()
             )
             if detectedDevice != "{0} #".format(
-                self._connect_args.device_hostname
-            ) and detectedDevice != "{0} $".format(self._connect_args.device_hostname):
+                self.connect_args.device_hostname
+            ) and detectedDevice != "{0} $".format(self.connect_args.device_hostname):
                 self.error = (
                     "Device detected name does not match the device name provided."
                 )
@@ -133,7 +132,7 @@ class FortigateConnect(Connect):
         startTime = time.time()
         recvBuffer = ""
 
-        while time.time() - startTime < self.maxRecvTime:
+        while time.time() - startTime < self.connect_args.max_recv_time:
 
             if self.channel.recv_ready():
                 recvBuffer += self.channel.recv(1024).decode().strip()
@@ -143,7 +142,7 @@ class FortigateConnect(Connect):
                     recvBuffer = recvBuffer[:-8]
                 elif re.match(
                     r"^{0} ((#|\$)|\([a-z]+\) (#|\$))$".format(
-                        self._connect_args.device_hostname
+                        self.connect_args.device_hostname
                     ),
                     recvBuffer.split("\n")[-1],
                 ):

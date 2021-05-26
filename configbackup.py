@@ -2,7 +2,7 @@ from core import plugin, model
 
 
 class _configbackup(plugin._plugin):
-    version = 0.1
+    version = 0.4
 
     def install(self):
         # Register batfish Models
@@ -61,14 +61,14 @@ class _configbackup(plugin._plugin):
                 "_action",
                 "plugins.configbackup.models.action",
             )
-        if self.version < 0.1:
+        if self.version < 0.2:
             model.registerModel(
                 "cfgBackupSave",
                 "_cfgBackupSave",
                 "_action",
                 "plugins.configbackup.models.action",
             )
-        if self.version < 0.1:
+        if self.version < 0.3:
             model.registerModel(
                 "cfgBackupGitops",
                 "_cfgBackupGitops",

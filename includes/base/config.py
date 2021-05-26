@@ -25,10 +25,11 @@ class FortigateConfigBackup:
         backup_args: FortigateConfigBackupArgs = None,
     ) -> None:
 
+        self.client = client
         self._backup_args = backup_args
 
-    def download_config(self, command, timeout=None, dstFolder=None):
-        # todo - WIP
+    def download_config(self):
+
         self.client.channel.send("{0}{1}".format(self._backup_args.command, "\n"))
         # receive config
         output = self.client.recv()
@@ -38,7 +39,7 @@ class FortigateConfigBackup:
         file = open(
             os.path.join(
                 self._backup_args.dst_folder,
-                f"{self.client._connect_args.device_hostname}-{self.client._connect_args.host}.cfg",
+                f"{self.client.connect_args.device_hostname}-{self.client.connect_args.host}.cfg",
             ),
             "w",
         )
