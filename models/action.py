@@ -4,15 +4,13 @@ from core import auth, helpers
 
 import jimi
 
-from plugins.configbackup.includes.base.core import (
+from plugins.configbackup.includes.fortigate import (
     FortigateConnect,
-    ConnectArgs,
     FortigateConnectArgs,
-)
-from plugins.configbackup.includes.base.config import (
     FortigateConfigBackup,
     FortigateConfigBackupArgs,
 )
+from plugins.configbackup.includes.base import ConnectArgs, ConfigBackupArgs
 
 
 class _cfgBackupConnect(action._action):
@@ -41,6 +39,7 @@ class _cfgBackupConnect(action._action):
             max_recv_time=self.max_recv_time,
             device_hostname=self.device_hostname,
         )
+
         # setup forti args
         forti_connect_args = FortigateConnectArgs(
             username=self.username, password=password
@@ -80,6 +79,9 @@ class _cfgBackupSave(action._action):
 
     def doAction(self, data):
 
+        # Setup Args
+        config_backup_args = ConfigBackupArgs(dst_folder=self.dst_folder)
+
         backup_args = FortigateConfigBackupArgs(
             command=self.command,
             timeout=self.timeout,
@@ -98,7 +100,9 @@ class _cfgBackupSave(action._action):
         if client:
 
             config_backup = FortigateConfigBackup(
-                client=client, backup_args=backup_args
+                client=client,
+                backup_args=backup_args,
+                config_backup_args=config_backup_args,
             )
 
             exitCode, errors = config_backup.download_config()

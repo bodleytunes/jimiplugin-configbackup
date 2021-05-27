@@ -1,66 +1,20 @@
-import time
 from dataclasses import dataclass
-from abc import ABC, abstractmethod
-from typing import Any, Callable
-import re, os
+import os, re
 from pathlib import Path
+import time
 
 from paramiko import SSHClient, AutoAddPolicy
 
-
-@dataclass
-class BaseConfigBackupArgs:
-
-    pass
-
-
-class BaseConfigBackup(ABC):
-    def __init__(self, base_config_backup_args: BaseConfigBackupArgs = None) -> None:
-        super().__init__()
-        self._base_config_backup_args = base_config_backup_args
-
-    def save_config(self):
-        pass
-
-    @abstractmethod
-    def connect(self):
-        pass
+from .base import Connect, ConnectArgs, ConfigBackupArgs
 
 
 @dataclass
-class ConfigBackupArgs:
+class FortigateConfigBackupArgs:
 
-    save_path: str
-
-
-class ConfigBackup(BaseConfigBackup):
-    def __init__(self, config_backup_args: ConfigBackupArgs) -> None:
-        super().__init__()
-        self._config_backup_args = config_backup_args
-
-    def save_config(self):
-        pass
-
-
-@dataclass
-class ConnectArgs:
-
-    host: str
-    device_hostname: str
-    port: int
+    command: str
+    dst_folder: str
     timeout: int
-    max_recv_time: int
-
-
-class Connect(BaseConfigBackup):
-    def __init__(self, connect_args: ConnectArgs = None) -> None:
-
-        self.error: str = None
-        self.connect_args = connect_args
-
-    @abstractmethod
-    def connect(self):
-        pass
+    device_model: str
 
 
 @dataclass
@@ -75,8 +29,8 @@ class FortigateConnectArgs:
 class FortigateConnect(Connect):
     def __init__(
         self,
-        forti_connect_args: FortigateConnectArgs = None,
         connect_args: ConnectArgs = None,
+        forti_connect_args: FortigateConnectArgs = None,
     ) -> None:
 
         # instanciate super/parent variables
@@ -152,3 +106,38 @@ class FortigateConnect(Connect):
 
     def __del__(self):
         self.disconnect()
+
+
+class FortigateConfigBackup:
+
+    client: FortigateConnect
+
+    def __init__(
+        self,
+        client: FortigateConnect = None,
+        backup_args: FortigateConfigBackupArgs = None,
+        config_backup_args: ConfigBackupArgs = None,
+    ) -> None:
+
+        self.client = client
+        self._backup_args = backup_args
+        self._config_backup_args = config_backup_args
+
+    def download_config(self):
+
+        self.client.channel.send("{0}{1}".format(self._backup_args.command, "\n"))
+        # receive config
+        output = self.client.recv()
+        # create dirs
+        Path(self._config_backup_args.dst_folder).mkdir(parents=True, exist_ok=True)
+        # create file
+        file = open(
+            os.path.join(
+                self._config_backup_args.dst_folder,
+                f"{self.client.connect_args.device_hostname}-{self.client.connect_args.host}.cfg",
+            ),
+            "w",
+        )
+        file.write(output)
+        file.close()
+        return (0, "")
