@@ -1,0 +1,23 @@
+kind: pipeline
+type: docker
+name: default
+
+steps:
+  - name: ssh
+    image: appleboy/drone-ssh
+    settings:
+      host: 10.101.0.100
+      username: root
+      key:
+        from_secret: ssh_key
+      port: 22
+      script:
+        - cd /gv1/jimi/plugins/configbackup
+        - git checkout dev
+        - git pull --set-upstream gitea dev -f
+        - kubectl rollout restart deployment/jimi-core -n jimi
+        - kubectl rollout restart deployment/jimi-web -n jimi
+      trigger:
+        branch:
+          include:
+            - dev
