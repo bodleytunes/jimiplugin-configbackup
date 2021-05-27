@@ -17,9 +17,9 @@ class _cfgBackupConnect(action._action):
     host = str()
     device_hostname = str()
     device_model = str()
-    port = int()
-    timeout = int()
-    max_recv_time = int()
+    port: int = 22  # sane default of ssh
+    timeout: int = 60  # Sane default of 60s
+    max_recv_time: int = 120
 
     def doAction(self, data):
 
@@ -36,8 +36,10 @@ class _cfgBackupConnect(action._action):
         # pass connect_args object to event stream so available to other plugin flows e.g. fortigate action below
         data["eventData"]["args"] = {}
         data["eventData"]["args"] = {"connect_args": connect_args}
+        # Model Details
         data["eventData"]["model"] = {}
         data["eventData"]["model"] = {"device_model": self.device_model}
+
         return {"result": True, "rc": 0, "msg": "Initiated Connection Args"}
 
     # data["eventData"]["args"] = {"connect_args": "hello world!"}
@@ -97,7 +99,7 @@ class _cfgBackupFortigateConnect(action._action):
 
 class _cfgBackupSave(action._action):
     command = str()
-    timeout = 60
+    timeout: int = 60
     dst_folder = str()
 
     def doAction(self, data):
