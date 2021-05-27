@@ -3,7 +3,7 @@ from core.models import action
 from core import auth, helpers
 
 from plugins.configbackup.includes.base import ConfigBackupArgs
-from plugins.configbackup.includes.connect import ConnectArgs
+from plugins.configbackup.includes.connect import ConnectArgs, Connect
 from plugins.configbackup.includes.fortigate import (
     FortigateConnect,
     FortigateConnectArgs,
@@ -20,17 +20,9 @@ class _cfgBackupConnect(action._action):
     port = int()
     timeout = int()
     max_recv_time = int()
-    # forti vars
-    username = str()
-    password = str()
-
-    client: FortigateConnect
 
     def doAction(self, data):
-        if self.password.startswith("ENC"):
-            password = auth.getPasswordFromENC(self.password)
-        else:
-            password = ""
+
         # setup base args
         connect_args = ConnectArgs(
             host=self.host,
@@ -41,12 +33,43 @@ class _cfgBackupConnect(action._action):
             device_model=self.device_model,
         )
 
-        # setup forti args
-        forti_connect_args = FortigateConnectArgs(
-            username=self.username, password=password
+        # pass connect_args object to event stream so available to other plugin flows e.g. fortigate action below
+        data["eventData"]["args"] = {}
+        data["eventData"]["args"] = {"connect_args": connect_args}
+        data["eventData"]["model"] = {}
+        data["eventData"]["model"] = {"device_model": self.device_model}
+        return {"result": True, "rc": 0, "msg": "Initiated Connection Args"}
+
+    # data["eventData"]["args"] = {"connect_args": "hello world!"}
+
+    def setAttribute(self, attr, value, sessionData=None):
+        # set parent class session data
+        return super(_cfgBackupConnect, self).setAttribute(
+            attr, value, sessionData=sessionData
         )
 
-        # Create connection instance
+
+class _cfgBackupFortigateConnect(action._action):
+
+    # forti vars
+    username = str()
+    password = str()
+
+    def doAction(self, data):
+
+        if self.password.startswith("ENC"):
+            self.password = auth.getPasswordFromENC(self.password)
+        else:
+            self.password = ""
+
+        connect_args = data["eventData"]["args"]["connect_args"]
+
+        # setup forti args
+        forti_connect_args = FortigateConnectArgs(
+            username=self.username, password=self.password
+        )
+
+        # Create connection client instance
         client = FortigateConnect(
             connect_args=connect_args, forti_connect_args=forti_connect_args
         )
@@ -54,10 +77,7 @@ class _cfgBackupConnect(action._action):
         if client is not None:
             data["eventData"]["remote"] = {}
             data["eventData"]["remote"] = {"client": client}
-            # set device model flag
-            data["eventData"]["flags"] = {}
-            data["eventData"]["flags"] = {"device_model": self.device_model}
-            return {"result": True, "rc": 0, "msg": "Connection Successful"}
+            return {"result": True, "rc": 0, "msg": "Success! Paramiko Client Created"}
         else:
             return {
                 "result": False,
@@ -70,7 +90,7 @@ class _cfgBackupConnect(action._action):
             self.password = "ENC {0}".format(auth.getENCFromPassword(value))
             return True
         # set parent class session data
-        return super(_cfgBackupConnect, self).setAttribute(
+        return super(_cfgBackupFortigateConnect, self).setAttribute(
             attr, value, sessionData=sessionData
         )
 
@@ -82,7 +102,7 @@ class _cfgBackupSave(action._action):
 
     def doAction(self, data):
 
-        device_model = data["eventData"]["flags"]["device_model"]
+        device_model = data["eventData"]["model"]["device_model"]
 
         # Setup Config related Args
         config_backup_args = ConfigBackupArgs(dst_folder=self.dst_folder)
@@ -97,7 +117,7 @@ class _cfgBackupSave(action._action):
 
         if client:
 
-            if device_model == "FORTIGATE":
+            if device_model.upper() == "FORTIGATE":
 
                 # Setup Fortigate related Args
                 backup_args = FortigateConfigBackupArgs(

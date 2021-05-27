@@ -25,7 +25,12 @@ class _configbackup(plugin._plugin):
             "_action",
             "plugins.configbackup.models.action",
         )
-
+        model.registerModel(
+            "cfgBackupFortigateConnect",
+            "_cfgBackupFortigateConnect",
+            "_action",
+            "plugins.configbackup.models.action",
+        )
         return True
 
     def uninstall(self):
@@ -49,7 +54,12 @@ class _configbackup(plugin._plugin):
             "_action",
             "plugins.configbackup.models.action",
         )
-
+        model.deregisterModel(
+            "cfgBackupFortigateConnect",
+            "_cfgBackupFortigateConnect",
+            "_action",
+            "plugins.configbackup.models.action",
+        )
         return True
 
     def upgrade(self, LatestPluginVersion):
@@ -75,5 +85,11 @@ class _configbackup(plugin._plugin):
                 "_action",
                 "plugins.configbackup.models.action",
             )
-
+        if self.version < 0.4:
+            model.registerModel(
+                "cfgBackupFortigateConnect",
+                "_cfgBackupFortigateConnect",
+                "_action",
+                "plugins.configbackup.models.action",
+            )
         return True
