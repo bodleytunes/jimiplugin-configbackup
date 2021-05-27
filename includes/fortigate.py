@@ -5,16 +5,15 @@ import time
 
 from paramiko import SSHClient, AutoAddPolicy
 
-from .base import Connect, ConnectArgs, ConfigBackupArgs
+from plugins.configbackup.includes.base import ConfigBackupArgs
+from plugins.configbackup.includes.connect import Connect, ConnectArgs
 
 
 @dataclass
 class FortigateConfigBackupArgs:
 
     command: str
-    dst_folder: str
     timeout: int
-    device_model: str
 
 
 @dataclass

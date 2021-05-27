@@ -2,21 +2,21 @@
 from core.models import action
 from core import auth, helpers
 
-import jimi
-
+from plugins.configbackup.includes.base import ConfigBackupArgs
+from plugins.configbackup.includes.connect import ConnectArgs
 from plugins.configbackup.includes.fortigate import (
     FortigateConnect,
     FortigateConnectArgs,
     FortigateConfigBackup,
     FortigateConfigBackupArgs,
 )
-from plugins.configbackup.includes.base import ConnectArgs, ConfigBackupArgs
 
 
 class _cfgBackupConnect(action._action):
     # base vars
     host = str()
     device_hostname = str()
+    device_model = str()
     port = int()
     timeout = int()
     max_recv_time = int()
@@ -38,6 +38,7 @@ class _cfgBackupConnect(action._action):
             timeout=self.timeout,
             max_recv_time=self.max_recv_time,
             device_hostname=self.device_hostname,
+            device_model=self.device_model,
         )
 
         # setup forti args
@@ -53,6 +54,9 @@ class _cfgBackupConnect(action._action):
         if client is not None:
             data["eventData"]["remote"] = {}
             data["eventData"]["remote"] = {"client": client}
+            # set device model flag
+            data["eventData"]["flags"] = {}
+            data["eventData"]["flags"] = {"device_model": self.device_model}
             return {"result": True, "rc": 0, "msg": "Connection Successful"}
         else:
             return {
@@ -75,19 +79,13 @@ class _cfgBackupSave(action._action):
     command = str()
     timeout = 60
     dst_folder = str()
-    device_model = str()
 
     def doAction(self, data):
 
-        # Setup Args
-        config_backup_args = ConfigBackupArgs(dst_folder=self.dst_folder)
+        device_model = data["eventData"]["flags"]["device_model"]
 
-        backup_args = FortigateConfigBackupArgs(
-            command=self.command,
-            timeout=self.timeout,
-            dst_folder=self.dst_folder,
-            device_model=self.device_model,
-        )
+        # Setup Config related Args
+        config_backup_args = ConfigBackupArgs(dst_folder=self.dst_folder)
 
         try:
             client = data["eventData"]["remote"]["client"]
@@ -99,12 +97,21 @@ class _cfgBackupSave(action._action):
 
         if client:
 
-            config_backup = FortigateConfigBackup(
-                client=client,
-                backup_args=backup_args,
-                config_backup_args=config_backup_args,
-            )
+            if device_model == "FORTIGATE":
 
+                # Setup Fortigate related Args
+                backup_args = FortigateConfigBackupArgs(
+                    command=self.command,
+                    timeout=self.timeout,
+                )
+                # Setup Fortigate related Args
+                config_backup = FortigateConfigBackup(
+                    client=client,
+                    config_backup_args=config_backup_args,
+                    backup_args=backup_args,
+                )
+
+            # Run config backup
             exitCode, errors = config_backup.download_config()
 
             if exitCode is None:

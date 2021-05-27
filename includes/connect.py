@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from .base import BaseConnect, ConnectArgs
+from plugins.configbackup.includes.base import BaseConnect
 
 
 @dataclass
@@ -8,6 +8,7 @@ class ConnectArgs:
 
     host: str
     device_hostname: str
+    device_model: str
     port: int
     timeout: int
     max_recv_time: int
