@@ -4,6 +4,7 @@ from core import auth, helpers
 
 from plugins.configbackup.includes.base import ConfigBackupArgs
 from plugins.configbackup.includes.connect import ConnectArgs, Connect
+
 from plugins.configbackup.includes.fortigate import (
     FortigateConnect,
     FortigateConnectArgs,
@@ -22,6 +23,7 @@ class _cfgBackupConnect(action._action):
     max_recv_time: int = 120
 
     def doAction(self, data):
+
 
         # setup base args
         connect_args = ConnectArgs(
@@ -72,6 +74,13 @@ class _cfgBackupFortigateConnect(action._action):
         )
 
         # Create connection client instance
+
+        # setup forti args
+        forti_connect_args = FortigateConnectArgs(
+            username=self.username, password=password
+        )
+
+        # Create connection instance
         client = FortigateConnect(
             connect_args=connect_args, forti_connect_args=forti_connect_args
         )
@@ -80,6 +89,7 @@ class _cfgBackupFortigateConnect(action._action):
             data["eventData"]["remote"] = {}
             data["eventData"]["remote"] = {"client": client}
             return {"result": True, "rc": 0, "msg": "Success! Paramiko Client Created"}
+
         else:
             return {
                 "result": False,
@@ -93,6 +103,7 @@ class _cfgBackupFortigateConnect(action._action):
             return True
         # set parent class session data
         return super(_cfgBackupFortigateConnect, self).setAttribute(
+
             attr, value, sessionData=sessionData
         )
 
@@ -100,11 +111,13 @@ class _cfgBackupFortigateConnect(action._action):
 class _cfgBackupSave(action._action):
     command = str()
     timeout: int = 60
+
     dst_folder = str()
 
     def doAction(self, data):
 
         device_model = data["eventData"]["model"]["device_model"]
+
 
         # Setup Config related Args
         config_backup_args = ConfigBackupArgs(dst_folder=self.dst_folder)
@@ -120,6 +133,7 @@ class _cfgBackupSave(action._action):
         if client:
 
             if device_model.upper() == "FORTIGATE":
+
 
                 # Setup Fortigate related Args
                 backup_args = FortigateConfigBackupArgs(

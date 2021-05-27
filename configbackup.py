@@ -31,6 +31,7 @@ class _configbackup(plugin._plugin):
             "_action",
             "plugins.configbackup.models.action",
         )
+
         return True
 
     def uninstall(self):
@@ -60,6 +61,7 @@ class _configbackup(plugin._plugin):
             "_action",
             "plugins.configbackup.models.action",
         )
+
         return True
 
     def upgrade(self, LatestPluginVersion):
@@ -92,4 +94,5 @@ class _configbackup(plugin._plugin):
                 "_action",
                 "plugins.configbackup.models.action",
             )
+
         return True
