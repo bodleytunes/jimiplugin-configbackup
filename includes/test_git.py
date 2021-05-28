@@ -117,18 +117,19 @@ class Test_Git(Test_BaseGit):
         # fetch --all
         pass
 
+    def test_set_remote_reference(self):
+        # Setup remote tracking
+        remote_ref = RemoteReference(
+            self.repo,
+            f"refs/remotes/{self.args.git_repo_name}/{self.args.git_branch}",
+        )
+        self.repo.head.reference.set_tracking_branch(remote_ref)
+
+        pass
+
     def test_push(self):
 
-        # self.test_pull()
         try:
-
-            # Setup remote tracking
-            remote_ref = RemoteReference(
-                self.repo,
-                f"refs/remotes/{self.args.git_repo_name}/{self.args.git_branch}",
-            )
-            self.repo.head.reference.set_tracking_branch(remote_ref)
-
             # prepare push
             o = self.repo.remote(name=self.args.git_remote)
             # push to remote
@@ -215,6 +216,9 @@ class GitController:
     def git_ops_commit(self):
         self.git.test_commit()
 
+    def git_ops_remote_reference(self):
+        self.git.test_remote_reference()
+
     def git_ops_push(self):
         self.git.test_push()
 
@@ -235,6 +239,7 @@ def main():
     control.git_ops_test_create_index()
     control.git_ops_add_files()
     control.git_ops_commit()
+    control.git_ops_remote_reference()
     control.git_ops_push()
     control.git_ops_pull()
 
