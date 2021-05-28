@@ -1,3 +1,4 @@
+import os
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
 
@@ -10,7 +11,7 @@ class GitArgs:
     git_path: str = "/tmp/git/backups"
     git_server: str = "gitea.wizznet.co.uk"
     git_repo_name: str = "backuprepo"
-    command_type: tuple = ("CLONE", "FETCH")
+    command_type: tuple = ("CLONE", "FETCH", "COMMIT", "PUSH")
 
 
 class BaseGitOps(ABC):
@@ -52,6 +53,18 @@ class GitOps(BaseGitOps):
 
     def push():
         pass
+
+    # create path
+    def create_local_path(self):
+        # Create path
+        from pathlib import Path
+
+        return Path(self.test_git_args.git_path).mkdir(parents=True, exist_ok=True)
+
+    # @pytest.mark.parametrize
+    def check_local_path(self, path):
+        # does path exist
+        return os.path.isdir(path)
 
 
 """
