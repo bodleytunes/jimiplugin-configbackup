@@ -188,7 +188,6 @@ class _cfgGitOps(action._action):
     # git_path
     git_path: str = "/tmp/git/backups"
     git_server: str = "gitea.company.com"
-    git_proto: str = "https"
     git_port: str = "443"
     git_project: str = "my-project"
     git_repo_name: str = "backup-repo"
@@ -201,8 +200,9 @@ class _cfgGitOps(action._action):
 
     def doAction(self, data) -> dict:
         # set the git path to the previously set destination folder if no explicit git path was passed in
-        if self.git_path is None or self.git_path == "/tmp/git/backups":
-            self.git_path = data["eventData"]["backup_args"]["dst_folder"]
+        if "dst_folder" in data:
+            if self.git_path is None or self.git_path == "/tmp/git/backups":
+                self.git_path = data["eventData"]["backup_args"]["dst_folder"]
 
         # setup arguments
         args = self._setup_args()
@@ -245,7 +245,6 @@ class _cfgGitOps(action._action):
             git_port=self.git_port,
             git_path=self.git_path,
             git_server=self.git_server,
-            git_proto=self.git_proto,
             git_project=self.git_project,
             git_repo_name=self.git_repo_name,
             git_branch=self.git_branch,
@@ -258,6 +257,6 @@ class _cfgGitOps(action._action):
 
     def setAttribute(self, attr, value, sessionData=None) -> super:
         # set parent class session data
-        return super(_cfgBackupSave, self).setAttribute(
+        return super(_cfgGitOps, self).setAttribute(
             attr, value, sessionData=sessionData
         )

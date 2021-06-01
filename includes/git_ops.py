@@ -13,13 +13,13 @@ import git
 @dataclass
 class GitArgs:
 
-    origin: Repo
-    index: Repo
+    origin: Repo = None
+    index: Repo = None
     git_url: str = None
+    git_proto: str = None
     git_port: str = "443"
     git_path: str = "/tmp/git/backups"
     git_server: str = "gitea.wizznet.co.uk"
-    git_proto: tuple = ("https", "http", "ssh")
     git_project: str = "testorg"
     git_repo_name: str = "testrepo"
     git_branch: str = "master"
@@ -53,7 +53,7 @@ class GitOps(BaseGitOps):
     def __init__(self, args: GitArgs = None) -> None:
         super().__init__()
 
-        self.git_args = args
+        self.args = args
 
         self._generate_url()
 
@@ -66,7 +66,11 @@ class GitOps(BaseGitOps):
     def init(self) -> None:
         try:
             # init local
-            git.Repo.init(self.args.git_path)
+            try:
+                git.Repo.init(self.args.git_path)
+            except Exception as e:
+                print(f"can't init new repo: {e}")
+                pass
             # get repo object
             self.repo = Repo(self.args.git_path)
         except Exception as e:
@@ -77,6 +81,16 @@ class GitOps(BaseGitOps):
         try:
             # if no remote then create one
             if len(self.repo.remotes) < 1:
+                self.repo.create_remote(self.args.git_remote, self.git_url)
+            elif len(self.repo.remotes) > 0:
+                # check incoming arg remote matches current remote
+                # if match do nothing, if no match delete all
+                # delete existing remote
+                if self.args.git_remote == self.repo.remotes[0].name:
+                    for r in self.repo.remotes:
+                        r.remove(repo=self.repo, name=r.name)
+                print("deleted¬!")
+                # now create new one
                 self.repo.create_remote(self.args.git_remote, self.git_url)
         except Exception as e:
             print(f"Error {e}")
@@ -166,22 +180,25 @@ class GitOps(BaseGitOps):
         project = self.args.git_project
         repo = self.args.git_repo_name
 
-        return str(f"{prefix}@{server}/{project}/{repo}.git")
+        return str(f"{prefix}@{server}:{project}/{repo}.git")
 
     def _generate_url(self) -> None:
         # generate url
-        if self.git_server_type == "https":
+        if self.args.git_server_type == "https":
+            self.args.git_proto = "https"
             self.git_url = self._get_url_https()
-        elif self.git_server_type == "gitea":
+        elif self.args.git_server_type == "gitea":
+            self.args.git_proto = "https"
             self.git_url = self._get_url_gitea()
-        elif self.git_server_type == "ssh":
+        elif self.args.git_server_type == "ssh":
+            self.args.git_proto = "ssh"
             self.git_url = self._get_url_ssh()
 
-    def setup_fs_paths(self, git_path: Optional[str]) -> None:
+    def setup_fs_paths(self, git_path: Optional[str] = None) -> None:
         if git_path is not None:
-            self.git.args.git_path = git_path
+            self.args.git_path = git_path
         # does path exist?  if not then create it
-        if not self.git.test_check_local_path(path=self.git.args.git_path):
+        if not self._check_local_path(path=self.args.git_path):
             # create path
-            self.git.test_create_local_path()
+            self._create_local_path()
         return
