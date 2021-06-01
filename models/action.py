@@ -185,23 +185,25 @@ class _cfgBackupSave(action._action):
 class _cfgGitOps(action._action):
 
     git_port: str = str()
-    git_path: str = str()
-    git_server: str = str()
-    git_port: str = str()
-    git_proto: str = str()  # todo
-    git_project: str = str()
-    git_repo_name: str = str()
+    # git_path
+    git_path: str = "/tmp/git/backups"
+    git_server: str = "gitea.company.com"
+    git_proto: str = "https"
+    git_port: str = "443"
+    git_project: str = "my-project"
+    git_repo_name: str = "backup-repo"
     git_branch: str = "master"
     git_remote: str = "origin"
     git_commit_message: str = "Jimi configuration backup commit."
-    server_type: str = str()
+    git_server_type: str = "gitea"
 
     git: Git
 
     def doAction(self, data) -> dict:
         # set the git path to the previously set destination folder if no explicit git path was passed in
-        if self.git_path is None:
+        if self.git_path is None or self.git_path == "/tmp/git/backups":
             self.git_path = data["eventData"]["backup_args"]["dst_folder"]
+
         # setup arguments
         args = self._setup_args()
         # run git operations
@@ -249,7 +251,7 @@ class _cfgGitOps(action._action):
             git_branch=self.git_branch,
             git_remote=self.git_remote,
             git_commit_message=self.git_commit_message,
-            server_type=self.server_type,
+            git_server_type=self.git_server_type,
         )
 
         return args

@@ -62,8 +62,8 @@ class Test_Git(Test_BaseGit):
     origin: Repo
     index: Repo
     git_remote: str
-    # server_type: tuple = ("https", "ssh", "gitea")
-    server_type: str = "gitea"
+    # git_server_type: tuple = ("https", "ssh", "gitea")
+    git_server_type: str = "gitea"
 
     def __init__(self, args: Test_GitArgs = None) -> None:
         super().__init__()
@@ -71,11 +71,11 @@ class Test_Git(Test_BaseGit):
         self.args = args
         self.git_remote = args.git_remote
         # generate url
-        if self.server_type == "https":
+        if self.git_server_type == "https":
             self.git_url = self._test_get_url_https()
-        elif self.server_type == "gitea":
+        elif self.git_server_type == "gitea":
             self.git_url = self._test_get_url_gitea()
-        elif self.server_type == "ssh":
+        elif self.git_server_type == "ssh":
             self.git_url = self._test_get_url_ssh()
 
     def test_clone(self):

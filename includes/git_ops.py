@@ -26,7 +26,7 @@ class GitArgs:
     git_remote: str = "origin"
     git_commit_message: str = "This is a config backup commit."
     command_type: tuple = ("CLONE", "FETCH")
-    server_type: str = "gitea"
+    git_server_type: str = "gitea"
 
 
 class BaseGitOps(ABC):
@@ -170,11 +170,11 @@ class GitOps(BaseGitOps):
 
     def _generate_url(self) -> None:
         # generate url
-        if self.server_type == "https":
+        if self.git_server_type == "https":
             self.git_url = self._get_url_https()
-        elif self.server_type == "gitea":
+        elif self.git_server_type == "gitea":
             self.git_url = self._get_url_gitea()
-        elif self.server_type == "ssh":
+        elif self.git_server_type == "ssh":
             self.git_url = self._get_url_ssh()
 
     def setup_fs_paths(self, git_path: Optional[str]) -> None:

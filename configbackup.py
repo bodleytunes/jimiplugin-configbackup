@@ -20,12 +20,6 @@ class _configbackup(plugin._plugin):
             "plugins.configbackup.models.action",
         )
         model.registerModel(
-            "cfgBackupGitops",
-            "_cfgBackupGitops",
-            "_action",
-            "plugins.configbackup.models.action",
-        )
-        model.registerModel(
             "cfgBackupFortigateConnect",
             "_cfgBackupFortigateConnect",
             "_action",
@@ -57,12 +51,6 @@ class _configbackup(plugin._plugin):
             "plugins.configbackup.models.action",
         )
         model.deregisterModel(
-            "cfgBackupGitops",
-            "_cfgBackupGitops",
-            "_action",
-            "plugins.configbackup.models.action",
-        )
-        model.deregisterModel(
             "cfgBackupFortigateConnect",
             "_cfgBackupFortigateConnect",
             "_action",
@@ -89,13 +77,6 @@ class _configbackup(plugin._plugin):
             model.registerModel(
                 "cfgBackupSave",
                 "_cfgBackupSave",
-                "_action",
-                "plugins.configbackup.models.action",
-            )
-        if self.version < 0.3:
-            model.registerModel(
-                "cfgBackupGitops",
-                "_cfgBackupGitops",
                 "_action",
                 "plugins.configbackup.models.action",
             )
