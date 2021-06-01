@@ -199,15 +199,15 @@ class _cfgGitOps(action._action):
     git: Git
 
     def doAction(self, data) -> dict:
-        # set the git path to the previously set destination folder if no explicit git path was passed in
-        if data["eventData"]["backup_args"]["dst_folder"] is not None:
-            if self.git_path is None or self.git_path == "/tmp/git/backups":
-                self.git_path = data["eventData"]["backup_args"]["dst_folder"]
 
-        # setup arguments
+        # set the git path on the filesystem
+        self._set_git_path(data)
+        # setup git arguments
         args = self._setup_args()
-        # run git operations
+
+        # create instance of Git object
         git = Git(args)
+        # run git operations
         try:
             git.setup_fs_paths()
             git.init()
@@ -254,6 +254,12 @@ class _cfgGitOps(action._action):
         )
 
         return args
+
+    def _set_git_path(self, data) -> None:
+        # set the git path to the previously set destination folder if no explicit git path was passed in
+        if data["eventData"]["backup_args"]["dst_folder"] is not None:
+            if self.git_path is None or self.git_path == "/tmp/git/backups":
+                self.git_path = data["eventData"]["backup_args"]["dst_folder"]
 
     def setAttribute(self, attr, value, sessionData=None) -> super:
         # set parent class session data
