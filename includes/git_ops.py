@@ -24,7 +24,8 @@ class GitArgs:
     git_project: str = "testorg"
     git_repo_name: str = "testrepo"
     git_branch: str = "master"
-    git_remote: str = "testrepo"
+    git_remote: str = "origin"
+    git_commit_message: str = "This is a config backup commit."
     command_type: tuple = ("CLONE", "FETCH")
     server_type: str = "gitea"
 
@@ -65,22 +66,21 @@ class GitOps(BaseGitOps):
 
     def init(self) -> None:
         try:
-            self.repo = git.Repo.init(self.args.git_path)
+            # init local
+            git.Repo.init(self.args.git_path)
+            # get repo object
+            self.repo = Repo(self.args.git_path)
         except Exception as e:
             print(f"unable to init exception: {e}")
-            self.repo = Repo(self.args.git_path)
-            self.origin = self.repo.remote(name=self.args.git_remote)
 
     def remote_add(self) -> None:
         # git remote add
         try:
-            if not self.origin.repo.head:
-                self.origin = self.origin.create_remote(
-                    self.args.git_repo_name, self.git_url
-                )
+            # if no remote then create one
+            if len(self.repo.remotes) < 1:
+                self.repo.create_remote(self.args.git_remote, self.git_url)
         except Exception as e:
             print(f"Error {e}")
-
             pass
 
     def create_index(self) -> None:
@@ -92,7 +92,7 @@ class GitOps(BaseGitOps):
         pass
 
     def commit(self) -> None:
-        self.index.commit("commit message")
+        self.index.commit(self.args.git_commit_message)
         pass
 
     def fetch(self) -> None:
@@ -104,8 +104,9 @@ class GitOps(BaseGitOps):
         # Setup remote tracking
         remote_ref = RemoteReference(
             self.repo,
-            f"refs/remotes/{self.args.git_repo_name}/{self.args.git_branch}",
+            f"refs/remotes/{self.args.git_remote}/{self.args.git_branch}",
         )
+        # set tracking branch
         self.repo.head.reference.set_tracking_branch(remote_ref)
 
         pass
@@ -180,10 +181,8 @@ class GitOps(BaseGitOps):
     def setup_fs_paths(self, git_path: Optional[str]) -> None:
         if git_path is not None:
             self.git.args.git_path = git_path
-        # does path exist?  if not create with create meth
-        if self.git._test_check_local_path(path=self.git.args.git_path):
-            self.repo = Repo(self.git.args.git_path)
-        else:
+        # does path exist?  if not then create it
+        if not self.git.test_check_local_path(path=self.git.args.git_path):
             # create path
-            self.git._test_create_local_path()
-            self.repo = Repo(self.git.args.git_path)
+            self.git.test_create_local_path()
+        return

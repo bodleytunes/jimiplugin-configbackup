@@ -29,7 +29,7 @@ class Test_GitArgs:
     git_project: str = "testorg"
     git_repo_name: str = "testrepo"
     git_branch: str = "master"
-    git_remote: str = "testrepo"
+    git_remote: str = "origin"
     command_type: tuple = ("CLONE", "FETCH")
 
 
@@ -83,22 +83,21 @@ class Test_Git(Test_BaseGit):
 
     def test_init(self):
         try:
-            self.repo = git.Repo.init(self.args.git_path)
+            # init local
+            git.Repo.init(self.args.git_path)
+            # get repo object
+            self.repo = Repo(self.args.git_path)
         except Exception as e:
             print(f"unable to init exception: {e}")
-            self.repo = Repo(self.args.git_path)
-            self.origin = self.repo.remote(name=self.args.git_remote)
 
     def test_remote_add(self):
         # git remote add
         try:
-            if not self.origin.repo.head:
-                self.origin = self.origin.create_remote(
-                    self.args.git_repo_name, self.git_url
-                )
+            # if no remote then create one
+            if len(self.repo.remotes) < 1:
+                self.repo.create_remote(self.args.git_remote, self.git_url)
         except Exception as e:
             print(f"Error {e}")
-
             pass
 
     def test_create_index(self):
@@ -121,7 +120,7 @@ class Test_Git(Test_BaseGit):
         # Setup remote tracking
         remote_ref = RemoteReference(
             self.repo,
-            f"refs/remotes/{self.args.git_repo_name}/{self.args.git_branch}",
+            f"refs/remotes/{self.args.git_remote}/{self.args.git_branch}",
         )
         self.repo.head.reference.set_tracking_branch(remote_ref)
 
@@ -133,7 +132,7 @@ class Test_Git(Test_BaseGit):
             # prepare push
             o = self.repo.remote(name=self.args.git_remote)
             # push to remote
-            o.repo.remotes[0].push()
+            o.repo.remotes[0].push(force=True)
 
         except Exception as e:
             print(Exception(f"Cannot push to repo due to error: {e}"))
@@ -193,18 +192,16 @@ class GitController:
         pass
 
     def git_ops_paths(self):
-        # does path exist?  if not create with create meth
-        if self.git.test_check_local_path(path=self.git.args.git_path):
-            self.repo = Repo(self.git.args.git_path)
-        else:
+        # does path exist?  if not then create it
+        if not self.git.test_check_local_path(path=self.git.args.git_path):
             # create path
             self.git.test_create_local_path()
-            self.repo = Repo(self.git.args.git_path)
+        return
 
     def git_ops_init(self):
         self.git.test_init()
 
-    def git_ops_add(self):
+    def git_ops_remote_add(self):
         self.git.test_remote_add()
 
     def git_ops_test_create_index(self):
@@ -217,7 +214,7 @@ class GitController:
         self.git.test_commit()
 
     def git_ops_remote_reference(self):
-        self.git.test_remote_reference()
+        self.git.test_set_remote_reference()
 
     def git_ops_push(self):
         self.git.test_push()
@@ -233,9 +230,9 @@ class GitController:
 def main():
 
     control = GitController()
-    control.git_ops_init()
     control.git_ops_paths()
-    control.git_ops_add()
+    control.git_ops_init()
+    control.git_ops_remote_add()
     control.git_ops_test_create_index()
     control.git_ops_add_files()
     control.git_ops_commit()
