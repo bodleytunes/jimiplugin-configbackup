@@ -116,7 +116,7 @@ class _cfgBackupSave(action._action):
     command = str()
     timeout: int = 60
 
-    dst_folder = str()
+    dst_folder: str = "/tmp/gitbackup"
 
     def doAction(self, data) -> dict:
 
@@ -156,11 +156,11 @@ class _cfgBackupSave(action._action):
             # Run config backup
             exitCode, errors = config_backup.download_config()
 
-            if exitCode is None:
+            if exitCode == 0:
                 return {
                     "result": True,
                     "rc": exitCode,
-                    "msg": "Command succesfull",
+                    "msg": "Command successfull",
                     "data": "config saved!",
                     "errors": errors,
                 }
@@ -200,7 +200,7 @@ class _cfgGitOps(action._action):
 
     def doAction(self, data) -> dict:
         # set the git path to the previously set destination folder if no explicit git path was passed in
-        if "dst_folder" in data:
+        if data["eventData"]["backup_args"]["dst_folder"] is not None:
             if self.git_path is None or self.git_path == "/tmp/git/backups":
                 self.git_path = data["eventData"]["backup_args"]["dst_folder"]
 
@@ -226,7 +226,7 @@ class _cfgGitOps(action._action):
             return {
                 "result": True,
                 "rc": 0,
-                "msg": "Command successfull",
+                "msg": "Git-Ops successfull",
                 "data": "Git Operations Complete!",
                 "errors": "",
             }

@@ -28,8 +28,6 @@ class GitArgs:
     command_type: tuple = ("CLONE", "FETCH")
     git_server_type: str = "gitea"
 
-    # GIT_PROTO_SSH: str = "ssh"
-
 
 class BaseGitOps(ABC):
     pass
@@ -95,7 +93,6 @@ class GitOps(BaseGitOps):
                 if self.args.git_remote == self.repo.remotes[0].name:
                     for r in self.repo.remotes:
                         r.remove(repo=self.repo, name=r.name)
-                print("deleted¬!")
                 # now create new one
                 self.repo.create_remote(self.args.git_remote, self.git_url)
         except Exception as e:
@@ -106,7 +103,7 @@ class GitOps(BaseGitOps):
         self.index = self.repo.index
 
     def files_add(self) -> None:
-        # add files
+        # add all files
         self.index.add("*")
         pass
 
@@ -128,15 +125,13 @@ class GitOps(BaseGitOps):
         # set tracking branch
         self.repo.head.reference.set_tracking_branch(remote_ref)
 
-        pass
-
     def push(self) -> None:
 
         try:
             # prepare push
             o = self.repo.remote(name=self.args.git_remote)
             # push to remote
-            o.repo.remotes[0].push()
+            o.repo.remotes[0].push(force=True)
 
         except Exception as e:
             print(Exception(f"Cannot push to repo due to error: {e}"))
