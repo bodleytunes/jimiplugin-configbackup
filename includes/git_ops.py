@@ -16,7 +16,6 @@ class GitArgs:
     origin: Repo
     index: Repo
     git_url: str = None
-    git_host: str = None
     git_port: str = "443"
     git_path: str = "/tmp/git/backups"
     git_server: str = "gitea.wizznet.co.uk"
@@ -100,7 +99,7 @@ class GitOps(BaseGitOps):
         # todo
         pass
 
-    def _set_remote_reference(self) -> None:
+    def set_remote_reference(self) -> None:
         # Setup remote tracking
         remote_ref = RemoteReference(
             self.repo,

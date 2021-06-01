@@ -2,7 +2,7 @@ from core import plugin, model
 
 
 class _configbackup(plugin._plugin):
-    version = 0.4
+    version = 0.5
 
     def install(self):
         # Register batfish Models
@@ -28,6 +28,13 @@ class _configbackup(plugin._plugin):
         model.registerModel(
             "cfgBackupFortigateConnect",
             "_cfgBackupFortigateConnect",
+            "_action",
+            "plugins.configbackup.models.action",
+        )
+        # _cfgGitOps
+        model.registerModel(
+            "cfgGitOps",
+            "_cfgGitOps",
             "_action",
             "plugins.configbackup.models.action",
         )
@@ -61,7 +68,12 @@ class _configbackup(plugin._plugin):
             "_action",
             "plugins.configbackup.models.action",
         )
-
+        model.deregisterModel(
+            "cfgGitOps",
+            "_cfgGitOps",
+            "_action",
+            "plugins.configbackup.models.action",
+        )
         return True
 
     def upgrade(self, LatestPluginVersion):
@@ -94,5 +106,11 @@ class _configbackup(plugin._plugin):
                 "_action",
                 "plugins.configbackup.models.action",
             )
-
+        if self.version < 0.5:
+            model.registerModel(
+                "cfgGitOps",
+                "_cfgGitOps",
+                "_action",
+                "plugins.configbackup.models.action",
+            )
         return True

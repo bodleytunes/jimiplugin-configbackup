@@ -2,6 +2,9 @@
 from core.models import action
 from core import auth, helpers
 
+from git import Repo
+
+
 from plugins.configbackup.includes.base import ConfigBackupArgs
 from plugins.configbackup.includes.connect import ConnectArgs, Connect
 
@@ -11,6 +14,9 @@ from plugins.configbackup.includes.fortigate import (
     FortigateConfigBackup,
     FortigateConfigBackupArgs,
 )
+
+from plugins.configbackup.includes.git_ops import GitOps as Git
+from plugins.configbackup.includes.git_ops import GitArgs
 
 
 class _cfgBackupConnect(action._action):
@@ -22,7 +28,7 @@ class _cfgBackupConnect(action._action):
     timeout: int = 60  # Sane default of 60s
     max_recv_time: int = 120
 
-    def doAction(self, data):
+    def doAction(self, data) -> dict:
 
         # setup base args
         connect_args = ConnectArgs(
@@ -45,7 +51,7 @@ class _cfgBackupConnect(action._action):
 
     # data["eventData"]["args"] = {"connect_args": "hello world!"}
 
-    def setAttribute(self, attr, value, sessionData=None):
+    def setAttribute(self, attr, value, sessionData=None) -> super:
         # set parent class session data
         return super(_cfgBackupConnect, self).setAttribute(
             attr, value, sessionData=sessionData
@@ -58,7 +64,7 @@ class _cfgBackupFortigateConnect(action._action):
     username = str()
     password = str()
 
-    def doAction(self, data):
+    def doAction(self, data) -> dict:
 
         if self.password.startswith("ENC"):
             self.password = auth.getPasswordFromENC(self.password)
@@ -96,7 +102,7 @@ class _cfgBackupFortigateConnect(action._action):
                 "msg": "Connection failed - {0}".format(client.error),
             }
 
-    def setAttribute(self, attr, value, sessionData=None):
+    def setAttribute(self, attr, value, sessionData=None) -> super:
         if attr == "password" and not value.startswith("ENC "):
             self.password = "ENC {0}".format(auth.getENCFromPassword(value))
             return True
@@ -112,7 +118,11 @@ class _cfgBackupSave(action._action):
 
     dst_folder = str()
 
-    def doAction(self, data):
+    def doAction(self, data) -> dict:
+
+        # Add dest folder to eventData
+        data["eventData"]["backup_args"] = {}
+        data["eventData"]["backup_args"] = {"dst_folder": self.dst_folder}
 
         device_model = data["eventData"]["model"]["device_model"]
 
@@ -131,7 +141,7 @@ class _cfgBackupSave(action._action):
 
             if device_model.upper() == "FORTIGATE":
 
-                # Setup Fortigate related Args
+                # Setup Fortigate connection related Args
                 backup_args = FortigateConfigBackupArgs(
                     command=self.command,
                     timeout=self.timeout,
@@ -165,7 +175,86 @@ class _cfgBackupSave(action._action):
         else:
             return {"result": False, "rc": 403, "msg": "No connection found"}
 
-    def setAttribute(self, attr, value, sessionData=None):
+    def setAttribute(self, attr, value, sessionData=None) -> super:
+        # set parent class session data
+        return super(_cfgBackupSave, self).setAttribute(
+            attr, value, sessionData=sessionData
+        )
+
+
+class _cfgGitOps(action._action):
+
+    git_port: str = str()
+    git_path: str = str()
+    git_server: str = str()
+    git_port: str = str()
+    git_proto: str = str()  # todo
+    git_project: str = str()
+    git_repo_name: str = str()
+    git_branch: str = "master"
+    git_remote: str = "origin"
+    git_commit_message: str = "Jimi configuration backup commit."
+    server_type: str = str()
+
+    git: Git
+
+    def doAction(self, data) -> dict:
+        # set the git path to the previously set destination folder if no explicit git path was passed in
+        if self.git_path is None:
+            self.git_path = data["eventData"]["backup_args"]["dst_folder"]
+        # setup arguments
+        args = self._setup_args()
+        # run git operations
+        git = Git(args)
+        try:
+            git.setup_fs_paths()
+            git.init()
+            git.remote_add()
+            git.create_index()
+            git.files_add()
+            git.commit()
+            git.set_remote_reference()
+            git.push()
+            git.pull()
+
+            # put git object into eventData for further use?
+            data["eventData"]["git"] = {}
+            data["eventData"]["git"] = git
+
+            return {
+                "result": True,
+                "rc": 0,
+                "msg": "Command successfull",
+                "data": "Git Operations Complete!",
+                "errors": "",
+            }
+        except Exception as e:
+            return {
+                "result": False,
+                "rc": 255,
+                "msg": f"Git exception: {e}",
+                "data": "",
+                "errors": e,
+            }
+
+    def _setup_args(self) -> GitArgs:
+
+        args = GitArgs(
+            git_port=self.git_port,
+            git_path=self.git_path,
+            git_server=self.git_server,
+            git_proto=self.git_proto,
+            git_project=self.git_project,
+            git_repo_name=self.git_repo_name,
+            git_branch=self.git_branch,
+            git_remote=self.git_remote,
+            git_commit_message=self.git_commit_message,
+            server_type=self.server_type,
+        )
+
+        return args
+
+    def setAttribute(self, attr, value, sessionData=None) -> super:
         # set parent class session data
         return super(_cfgBackupSave, self).setAttribute(
             attr, value, sessionData=sessionData
