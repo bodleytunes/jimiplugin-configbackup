@@ -28,6 +28,8 @@ class GitArgs:
     command_type: tuple = ("CLONE", "FETCH")
     git_server_type: str = "gitea"
 
+    # GIT_PROTO_SSH: str = "ssh"
+
 
 class BaseGitOps(ABC):
     pass
@@ -50,6 +52,10 @@ class BaseGitOps(ABC):
 
 
 class GitOps(BaseGitOps):
+
+    GIT_PROTO_GITEA: str = "http"
+    GIT_PROTO_HTTPS: str = "https"
+
     def __init__(self, args: GitArgs = None) -> None:
         super().__init__()
 
@@ -157,7 +163,7 @@ class GitOps(BaseGitOps):
         return os.path.isdir(path)
 
     def _get_url_https(self) -> str:
-        proto = self.args.git_proto[0]
+        proto = self.GIT_PROTO_HTTPS
         server = self.args.git_server
         port = self.args.git_port
         project = self.args.git_project
@@ -166,7 +172,7 @@ class GitOps(BaseGitOps):
         return str(f"{proto}://{server}:{port}/{project}/{repo}.git")
 
     def _get_url_gitea(self) -> str:
-        proto = self.args.git_proto[1]
+        proto = self.GIT_PROTO_GITEA
         server = self.args.git_server
         port = "3000"
         project = self.args.git_project
