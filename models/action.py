@@ -267,6 +267,7 @@ class _cfgGitClone(action._action):
     repo: Repo = None
     clone_git_path: str = "/tmp/git/backups"
     clone_url_path: str = "https://github.com/bodleytunes/jimiplugin-batfish.git/"
+    clone_subpath: str = "jimiplugin-batfish"
 
     def doAction(self, data):
         # pre flight checks
@@ -274,7 +275,9 @@ class _cfgGitClone(action._action):
         # do cloning
         g = Git(args=GitArgs(git_path=self.clone_git_path), CLONE=True)
         self.repo = g.clone(
-            local_clone_path=self.clone_git_path, url_path=self.clone_url_path
+            local_clone_path=self.clone_git_path,
+            url_path=self.clone_url_path,
+            clone_subpath=self.clone_subpath,
         )
         if self.repo is not None:
             return {

@@ -67,15 +67,18 @@ class GitOps(BaseGitOps):
 
     pass
 
-    def clone(self, local_clone_path: str, url_path: str) -> Union[git.Repo, bool]:
-        # todo: should clone this even go in its own class or a sub-class?
+    def clone(
+        self, local_clone_path: str, url_path: str, clone_subpath: str
+    ) -> Union[git.Repo, bool]:
         # get repo
         g = git.Repo()
+        # build full path to clone to
+        clone_path = self._build_clone_path(local_clone_path, clone_subpath)
         # pre flights
         if self._check_local_path(path=local_clone_path):
             try:
                 # clone
-                self.repo = g.clone_from(url=url_path, to_path=local_clone_path)
+                self.repo = g.clone_from(url=url_path, to_path=clone_path)
                 return self.repo
             except Exception as e:
                 print(f"can't clone repo: {e}")
@@ -85,12 +88,16 @@ class GitOps(BaseGitOps):
                 # create new path
                 self._create_local_path()
                 # clone
-                self.repo = g.clone_from(url=url_path, to_path=local_clone_path)
+                self.repo = g.clone_from(url=url_path, to_path=clone_path)
                 return self.repo
             except Exception as e:
                 print(f"can't clone repo: {e}")
                 # now git pull instead?
                 return
+
+    def _build_clone_path(self, local_clone_path, clone_subpath) -> str:
+
+        return os.path.join(local_clone_path, clone_subpath)
 
     def init(self) -> None:
         try:
