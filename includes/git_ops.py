@@ -1,7 +1,7 @@
 import os
 from dataclasses import dataclass
 from abc import ABC, abstractmethod
-from typing import Optional
+from typing import Optional, Union
 
 from git.refs.remote import RemoteReference
 from git import Repo
@@ -63,9 +63,23 @@ class GitOps(BaseGitOps):
 
     pass
 
-    def clone(self):
-        # todo
-        pass
+    def clone(self, local_clone_path: str, url_path: str) -> Union[git.Repo, bool]:
+        # pre flights
+        if self._check_local_path(path=local_clone_path):
+            if self._check_repo_exists(path=local_clone_path):
+                try:
+                    self.repo = git.Repo.clone(path=url_path)
+                    return self.repo
+                except Exception as e:
+                    print(f"can't clone repo: {e}")
+                    return False
+        else:
+            try:
+                self.repo = git.Repo.clone(path=url_path)
+                return self.repo
+            except Exception as e:
+                print(f"can't clone repo: {e}")
+                return False
 
     def init(self) -> None:
         try:
@@ -153,9 +167,13 @@ class GitOps(BaseGitOps):
 
         return Path(self.args.git_path).mkdir(parents=True, exist_ok=True)
 
-    def _check_local_path(self, path) -> bool:
+    def _check_local_path(self, path: str) -> bool:
         # does path exist
         return os.path.isdir(path)
+
+    def _check_repo_exists(self, path: str) -> bool:
+        # does repo exist
+        return self.repo.repo.exists(path)
 
     def _get_url_https(self) -> str:
         proto = self.GIT_PROTO_HTTPS

@@ -2,7 +2,7 @@ from core import plugin, model
 
 
 class _configbackup(plugin._plugin):
-    version = 0.5
+    version = 0.6
 
     def install(self):
         # Register batfish Models
@@ -32,7 +32,13 @@ class _configbackup(plugin._plugin):
             "_action",
             "plugins.configbackup.models.action",
         )
-
+        # _cfgGitClone
+        model.registerModel(
+            "cfgGitClone",
+            "_cfgGitClone",
+            "_action",
+            "plugins.configbackup.models.action",
+        )
         return True
 
     def uninstall(self):
@@ -59,6 +65,13 @@ class _configbackup(plugin._plugin):
         model.deregisterModel(
             "cfgGitOps",
             "_cfgGitOps",
+            "_action",
+            "plugins.configbackup.models.action",
+        )
+        # _cfgGitClone
+        model.deregisterModel(
+            "cfgGitClone",
+            "_cfgGitClone",
             "_action",
             "plugins.configbackup.models.action",
         )
@@ -91,6 +104,13 @@ class _configbackup(plugin._plugin):
             model.registerModel(
                 "cfgGitOps",
                 "_cfgGitOps",
+                "_action",
+                "plugins.configbackup.models.action",
+            )
+        if self.version < 0.6:
+            model.registerModel(
+                "cfgGitClone",
+                "_cfgGitClone",
                 "_action",
                 "plugins.configbackup.models.action",
             )

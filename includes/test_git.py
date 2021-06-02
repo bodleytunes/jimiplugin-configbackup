@@ -11,10 +11,11 @@ SCRIPT_DIR = os.path.dirname(
     os.path.realpath(os.path.join(os.getcwd(), os.path.expanduser(__file__)))
 )
 sys.path.append(os.path.normpath(os.path.join(SCRIPT_DIR, PACKAGE_PARENT)))
-
+from typing import Union
 from unittest.mock import patch
 from git import Repo
 import git
+import pytest
 
 
 @dataclass
@@ -30,6 +31,7 @@ class Test_GitArgs:
     git_repo_name: str = "testrepo"
     git_branch: str = "master"
     git_remote: str = "origin"
+    git_server_type: str = "gitea"
     command_type: tuple = ("CLONE", "FETCH")
 
 
@@ -77,9 +79,6 @@ class Test_Git(Test_BaseGit):
             self.git_url = self._test_get_url_gitea()
         elif self.git_server_type == "ssh":
             self.git_url = self._test_get_url_ssh()
-
-    def test_clone(self):
-        pass
 
     def test_init(self):
         try:
@@ -184,6 +183,35 @@ class Test_Git(Test_BaseGit):
 
         return str(f"{prefix}@{server}/{project}/{repo}.git")
 
+    def test_clone(
+        self, local_clone_path: str, url_path: str, repo: git.Repo
+    ) -> Union[git.Repo, bool]:
+        # pre flights
+
+        if self._check_local_path(path=local_clone_path):
+            if self._check_repo_exists(path=local_clone_path):
+                try:
+                    self.repo = repo.clone(path=url_path)
+                    return self.repo
+                except Exception as e:
+                    print(f"can't clone repo: {e}")
+                    return False
+        else:
+            try:
+                self.repo = repo.clone(path=url_path)
+                return True
+            except Exception as e:
+                print(f"can't clone repo: {e}")
+                return False
+
+    def _check_local_path(self, path: str) -> bool:
+        # does path exist
+        return os.path.isdir(path)
+
+    def _check_repo_exists(self, path: str) -> bool:
+        # does repo exist
+        return self.repo.repo.exists(path)
+
 
 class GitController:
     def __init__(self) -> None:
@@ -241,8 +269,6 @@ def main():
     control.git_ops_pull()
 
 
-if __name__ == "__main__":
-    main()
 """
 class GitClone(Git):
     pass
@@ -255,3 +281,37 @@ class GitFetch(Git):
 class GitPush(Git):
     pass
 """
+
+
+@pytest.fixture(autouse=True)
+def test_create_gitops():
+    from plugins.configbackup.includes.git_ops import GitOps, GitArgs
+
+    g = Test_Git(Test_GitArgs(git_server_type="gitea"))
+    return g
+
+
+@pytest.fixture(autouse=True)
+def test_create_repo():
+    from plugins.configbackup.includes.git_ops import GitOps, GitArgs
+
+    r = git.Repo()
+    return r
+
+
+@pytest.mark.git_clone
+def test_pytest_clone(test_create_gitops, test_create_repo):
+    g = test_create_gitops
+    r = test_create_repo
+    print(g)
+    print(r)
+    g.test_clone(
+        local_clone_path="/tmp/testclone",
+        url_path="https://github.com/bodleytunes/wizznet-cloud-salt.git",
+        repo=r,
+    )
+    assert g
+
+
+if __name__ == "__main__":
+    main()

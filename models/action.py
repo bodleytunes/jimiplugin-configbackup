@@ -201,7 +201,7 @@ class _cfgGitOps(action._action):
     def doAction(self, data) -> dict:
 
         # set the git path on the filesystem
-        self._set_git_path(data)
+        self.git_path = _helper.set_git_path(git_path=self.git_path, data=data)
         # setup git arguments
         args = self._setup_args()
 
@@ -255,14 +255,59 @@ class _cfgGitOps(action._action):
 
         return args
 
-    def _set_git_path(self, data) -> None:
-        # set the git path to the previously set destination folder if no explicit git path was passed in
-        if data["eventData"]["backup_args"]["dst_folder"] is not None:
-            if self.git_path is None or self.git_path == "/tmp/git/backups":
-                self.git_path = data["eventData"]["backup_args"]["dst_folder"]
-
     def setAttribute(self, attr, value, sessionData=None) -> super:
         # set parent class session data
         return super(_cfgGitOps, self).setAttribute(
             attr, value, sessionData=sessionData
         )
+
+
+class _cfgGitClone(action._action):
+
+    clone_git_path: str = "/tmp/git/backups"
+    clone_url_path: str = "https://github.com/bodleytunes/jimiplugin-batfish.git/"
+
+    def doAction(self, data):
+        # pre flight checks
+        self._pre_flights(data)
+        # do cloning
+        Git.clone(local_clone_path=self.clone_git_path, url_path=self.clone_url_path)
+
+    def _pre_flights(self, data):
+        self.clone_git_path = _helper.set_git_path(
+            git_path=self.clone_git_path, data=data
+        )
+
+    def _set_git_path(git_path: str, data=None) -> str:
+        # set the git path to the previously set destination folder if no explicit git path was passed in
+        try:
+            if data["eventData"]["backup_args"]["dst_folder"] is not None:
+                if git_path is None or git_path == "/tmp/git/backups":
+                    git_path = data["eventData"]["backup_args"]["dst_folder"]
+                    return git_path
+        except Exception as e:
+            print(f"{e}")
+            return git_path
+
+    def setAttribute(self, attr, value, sessionData=None) -> super:
+        # set parent class session data
+        return super(_cfgGitClone, self).setAttribute(
+            attr, value, sessionData=sessionData
+        )
+
+
+class _helper:
+    def __init__(self) -> None:
+        pass
+
+    @staticmethod
+    def set_git_path(git_path: str, data=None) -> str:
+        # set the git path to the previously set destination folder if no explicit git path was passed in
+        try:
+            if data["eventData"]["backup_args"]["dst_folder"] is not None:
+                if git_path is None or git_path == "/tmp/git/backups":
+                    git_path = data["eventData"]["backup_args"]["dst_folder"]
+                    return git_path
+        except Exception as e:
+            print(f"{e}")
+            return git_path
