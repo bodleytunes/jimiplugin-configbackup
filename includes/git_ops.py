@@ -53,33 +53,44 @@ class GitOps(BaseGitOps):
 
     GIT_PROTO_GITEA: str = "http"
     GIT_PROTO_HTTPS: str = "https"
+    CLONE: bool = "False"
 
-    def __init__(self, args: GitArgs = None) -> None:
+    def __init__(self, args: GitArgs = None, CLONE: bool = None) -> None:
         super().__init__()
 
         self.args = args
+        self.CLONE = CLONE
 
-        self._generate_url()
+        if self.CLONE is False:
+            # dont run this if we are just running a clone
+            self._generate_url()
 
     pass
 
     def clone(self, local_clone_path: str, url_path: str) -> Union[git.Repo, bool]:
+        # todo: should clone this even go in its own class or a sub-class?
+        # get repo
+        g = git.Repo()
         # pre flights
         if self._check_local_path(path=local_clone_path):
-            if self._check_repo_exists(path=local_clone_path):
-                try:
-                    self.repo = git.Repo.clone(path=url_path)
-                    return self.repo
-                except Exception as e:
-                    print(f"can't clone repo: {e}")
-                    return False
-        else:
             try:
-                self.repo = git.Repo.clone(path=url_path)
+                # clone
+                self.repo = g.clone_from(url=url_path, to_path=local_clone_path)
                 return self.repo
             except Exception as e:
                 print(f"can't clone repo: {e}")
-                return False
+                return
+        else:
+            try:
+                # create new path
+                self._create_local_path()
+                # clone
+                self.repo = g.clone_from(url=url_path, to_path=local_clone_path)
+                return self.repo
+            except Exception as e:
+                print(f"can't clone repo: {e}")
+                # now git pull instead?
+                return
 
     def init(self) -> None:
         try:

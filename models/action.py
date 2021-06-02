@@ -264,6 +264,7 @@ class _cfgGitOps(action._action):
 
 class _cfgGitClone(action._action):
 
+    repo: Repo = None
     clone_git_path: str = "/tmp/git/backups"
     clone_url_path: str = "https://github.com/bodleytunes/jimiplugin-batfish.git/"
 
@@ -271,7 +272,26 @@ class _cfgGitClone(action._action):
         # pre flight checks
         self._pre_flights(data)
         # do cloning
-        Git.clone(local_clone_path=self.clone_git_path, url_path=self.clone_url_path)
+        g = Git(args=GitArgs(git_path=self.clone_git_path), CLONE=True)
+        self.repo = g.clone(
+            local_clone_path=self.clone_git_path, url_path=self.clone_url_path
+        )
+        if self.repo is not None:
+            return {
+                "result": True,
+                "rc": 0,
+                "msg": "Git-Clone successfull",
+                "data": "Git Operations Complete!",
+                "errors": "",
+            }
+        else:
+            return {
+                "result": False,
+                "rc": 255,
+                "msg": "Clone failed",
+                "data": f"Path exists {self.clone_git_path}",
+                "errors": "Clone failed",
+            }
 
     def _pre_flights(self, data):
         self.clone_git_path = _helper.set_git_path(
