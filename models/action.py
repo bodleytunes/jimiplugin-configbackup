@@ -2,8 +2,12 @@
 from core.models import action
 from core import auth, helpers
 
+from git import Repo
+
+
 from plugins.configbackup.includes.base import ConfigBackupArgs
-from plugins.configbackup.includes.connect import ConnectArgs
+from plugins.configbackup.includes.connect import ConnectArgs, Connect
+
 from plugins.configbackup.includes.fortigate import (
     FortigateConnect,
     FortigateConnectArgs,
@@ -11,26 +15,21 @@ from plugins.configbackup.includes.fortigate import (
     FortigateConfigBackupArgs,
 )
 
+from plugins.configbackup.includes.git_ops import GitOps as Git
+from plugins.configbackup.includes.git_ops import GitArgs
+
 
 class _cfgBackupConnect(action._action):
     # base vars
     host = str()
     device_hostname = str()
     device_model = str()
-    port = int()
-    timeout = int()
-    max_recv_time = int()
-    # forti vars
-    username = str()
-    password = str()
+    port: int = 22  # sane default of ssh
+    timeout: int = 60  # Sane default of 60s
+    max_recv_time: int = 120
 
-    client: FortigateConnect
+    def doAction(self, data) -> dict:
 
-    def doAction(self, data):
-        if self.password.startswith("ENC"):
-            password = auth.getPasswordFromENC(self.password)
-        else:
-            password = ""
         # setup base args
         connect_args = ConnectArgs(
             host=self.host,
@@ -41,9 +40,49 @@ class _cfgBackupConnect(action._action):
             device_model=self.device_model,
         )
 
+        # pass connect_args object to event stream so available to other plugin flows e.g. fortigate action below
+        data["eventData"]["args"] = {}
+        data["eventData"]["args"] = {"connect_args": connect_args}
+        # Model Details
+        data["eventData"]["model"] = {}
+        data["eventData"]["model"] = {"device_model": self.device_model}
+
+        return {"result": True, "rc": 0, "msg": "Initiated Connection Args"}
+
+    # data["eventData"]["args"] = {"connect_args": "hello world!"}
+
+    def setAttribute(self, attr, value, sessionData=None) -> super:
+        # set parent class session data
+        return super(_cfgBackupConnect, self).setAttribute(
+            attr, value, sessionData=sessionData
+        )
+
+
+class _cfgBackupFortigateConnect(action._action):
+
+    # forti vars
+    username = str()
+    password = str()
+
+    def doAction(self, data) -> dict:
+
+        if self.password.startswith("ENC"):
+            self.password = auth.getPasswordFromENC(self.password)
+        else:
+            self.password = ""
+
+        connect_args = data["eventData"]["args"]["connect_args"]
+
         # setup forti args
         forti_connect_args = FortigateConnectArgs(
-            username=self.username, password=password
+            username=self.username, password=self.password
+        )
+
+        # Create connection client instance
+
+        # setup forti args
+        forti_connect_args = FortigateConnectArgs(
+            username=self.username, password=self.password
         )
 
         # Create connection instance
@@ -54,10 +93,8 @@ class _cfgBackupConnect(action._action):
         if client is not None:
             data["eventData"]["remote"] = {}
             data["eventData"]["remote"] = {"client": client}
-            # set device model flag
-            data["eventData"]["flags"] = {}
-            data["eventData"]["flags"] = {"device_model": self.device_model}
-            return {"result": True, "rc": 0, "msg": "Connection Successful"}
+            return {"result": True, "rc": 0, "msg": "Success! Paramiko Client Created"}
+
         else:
             return {
                 "result": False,
@@ -65,24 +102,29 @@ class _cfgBackupConnect(action._action):
                 "msg": "Connection failed - {0}".format(client.error),
             }
 
-    def setAttribute(self, attr, value, sessionData=None):
+    def setAttribute(self, attr, value, sessionData=None) -> super:
         if attr == "password" and not value.startswith("ENC "):
             self.password = "ENC {0}".format(auth.getENCFromPassword(value))
             return True
         # set parent class session data
-        return super(_cfgBackupConnect, self).setAttribute(
+        return super(_cfgBackupFortigateConnect, self).setAttribute(
             attr, value, sessionData=sessionData
         )
 
 
 class _cfgBackupSave(action._action):
     command = str()
-    timeout = 60
-    dst_folder = str()
+    timeout: int = 60
 
-    def doAction(self, data):
+    dst_folder: str = "/tmp/gitbackup"
 
-        device_model = data["eventData"]["flags"]["device_model"]
+    def doAction(self, data) -> dict:
+
+        # Add dest folder to eventData
+        data["eventData"]["backup_args"] = {}
+        data["eventData"]["backup_args"] = {"dst_folder": self.dst_folder}
+
+        device_model = data["eventData"]["model"]["device_model"]
 
         # Setup Config related Args
         config_backup_args = ConfigBackupArgs(dst_folder=self.dst_folder)
@@ -97,9 +139,9 @@ class _cfgBackupSave(action._action):
 
         if client:
 
-            if device_model == "FORTIGATE":
+            if device_model.upper() == "FORTIGATE":
 
-                # Setup Fortigate related Args
+                # Setup Fortigate connection related Args
                 backup_args = FortigateConfigBackupArgs(
                     command=self.command,
                     timeout=self.timeout,
@@ -114,11 +156,11 @@ class _cfgBackupSave(action._action):
             # Run config backup
             exitCode, errors = config_backup.download_config()
 
-            if exitCode is None:
+            if exitCode == 0:
                 return {
                     "result": True,
                     "rc": exitCode,
-                    "msg": "Command succesfull",
+                    "msg": "Command successfull",
                     "data": "config saved!",
                     "errors": errors,
                 }
@@ -133,8 +175,162 @@ class _cfgBackupSave(action._action):
         else:
             return {"result": False, "rc": 403, "msg": "No connection found"}
 
-    def setAttribute(self, attr, value, sessionData=None):
+    def setAttribute(self, attr, value, sessionData=None) -> super:
         # set parent class session data
         return super(_cfgBackupSave, self).setAttribute(
             attr, value, sessionData=sessionData
         )
+
+
+class _cfgGitOps(action._action):
+
+    git_port: str = str()
+    # git_path
+    git_path: str = "/tmp/git/backups"
+    git_server: str = "gitea.company.com"
+    git_port: str = "443"
+    git_project: str = "my-project"
+    git_repo_name: str = "backup-repo"
+    git_branch: str = "master"
+    git_remote: str = "origin"
+    git_commit_message: str = "Jimi configuration backup commit."
+    git_server_type: str = "gitea"
+
+    git: Git
+
+    def doAction(self, data) -> dict:
+
+        # set the git path on the filesystem
+        self.git_path = _helper.set_git_path(git_path=self.git_path, data=data)
+        # setup git arguments
+        args = self._setup_args()
+
+        # create instance of Git object
+        git = Git(args)
+        # run git operations
+        try:
+            git.setup_fs_paths()
+            git.init()
+            git.remote_add()
+            git.create_index()
+            git.files_add()
+            git.commit()
+            git.set_remote_reference()
+            git.push()
+            git.pull()
+
+            # put git object into eventData for further use?
+            data["eventData"]["git"] = {}
+            data["eventData"]["git"] = git
+
+            return {
+                "result": True,
+                "rc": 0,
+                "msg": "Git-Ops successfull",
+                "data": "Git Operations Complete!",
+                "errors": "",
+            }
+        except Exception as e:
+            return {
+                "result": False,
+                "rc": 255,
+                "msg": f"Git exception: {e}",
+                "data": "",
+                "errors": e,
+            }
+
+    def _setup_args(self) -> GitArgs:
+
+        args = GitArgs(
+            git_port=self.git_port,
+            git_path=self.git_path,
+            git_server=self.git_server,
+            git_project=self.git_project,
+            git_repo_name=self.git_repo_name,
+            git_branch=self.git_branch,
+            git_remote=self.git_remote,
+            git_commit_message=self.git_commit_message,
+            git_server_type=self.git_server_type,
+        )
+
+        return args
+
+    def setAttribute(self, attr, value, sessionData=None) -> super:
+        # set parent class session data
+        return super(_cfgGitOps, self).setAttribute(
+            attr, value, sessionData=sessionData
+        )
+
+
+class _cfgGitClone(action._action):
+
+    repo: Repo = None
+    clone_git_path: str = "/tmp/git/backups"
+    clone_url_path: str = "https://github.com/bodleytunes/jimiplugin-batfish.git/"
+    clone_subpath: str = "jimiplugin-batfish"
+
+    def doAction(self, data):
+        # pre flight checks
+        self._pre_flights(data)
+        # do cloning
+        g = Git(args=GitArgs(git_path=self.clone_git_path), CLONE=True)
+        self.repo = g.clone(
+            local_clone_path=self.clone_git_path,
+            url_path=self.clone_url_path,
+            clone_subpath=self.clone_subpath,
+        )
+        if self.repo is not None:
+            return {
+                "result": True,
+                "rc": 0,
+                "msg": "Git-Clone successfull",
+                "data": "Git Operations Complete!",
+                "errors": "",
+            }
+        else:
+            return {
+                "result": False,
+                "rc": 255,
+                "msg": "Clone failed",
+                "data": f"Path exists {self.clone_git_path}",
+                "errors": "Clone failed",
+            }
+
+    def _pre_flights(self, data):
+        self.clone_git_path = _helper.set_git_path(
+            git_path=self.clone_git_path, data=data
+        )
+
+    def _set_git_path(git_path: str, data=None) -> str:
+        # set the git path to the previously set destination folder if no explicit git path was passed in
+        try:
+            if data["eventData"]["backup_args"]["dst_folder"] is not None:
+                if git_path is None or git_path == "/tmp/git/backups":
+                    git_path = data["eventData"]["backup_args"]["dst_folder"]
+                    return git_path
+        except Exception as e:
+            print(f"{e}")
+            return git_path
+
+    def setAttribute(self, attr, value, sessionData=None) -> super:
+        # set parent class session data
+        return super(_cfgGitClone, self).setAttribute(
+            attr, value, sessionData=sessionData
+        )
+
+
+class _helper:
+    def __init__(self) -> None:
+        pass
+
+    @staticmethod
+    def set_git_path(git_path: str, data=None) -> str:
+        # set the git path to the previously set destination folder if no explicit git path was passed in
+        try:
+            if data["eventData"]["backup_args"]["dst_folder"] is not None:
+                if git_path is None or git_path == "/tmp/git/backups":
+                    git_path = data["eventData"]["backup_args"]["dst_folder"]
+                    return git_path
+        except Exception as e:
+            print(f"{e}")
+            return git_path
