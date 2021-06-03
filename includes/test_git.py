@@ -191,7 +191,7 @@ class Test_Git(Test_BaseGit):
         if self._check_local_path(path=local_clone_path):
             if self._check_repo_exists(path=local_clone_path):
                 try:
-                    self.repo = repo.clone(path=url_path)
+                    self.repo = repo.clone_from(url=url_path, to_path="/tmp")
                     return self.repo
                 except Exception as e:
                     print(f"can't clone repo: {e}")
@@ -281,36 +281,6 @@ class GitFetch(Git):
 class GitPush(Git):
     pass
 """
-
-
-@pytest.fixture(autouse=True)
-def test_create_gitops():
-    from plugins.configbackup.includes.git_ops import GitOps, GitArgs
-
-    g = Test_Git(Test_GitArgs(git_server_type="gitea"))
-    return g
-
-
-@pytest.fixture(autouse=True)
-def test_create_repo():
-    from plugins.configbackup.includes.git_ops import GitOps, GitArgs
-
-    r = git.Repo()
-    return r
-
-
-@pytest.mark.git_clone
-def test_pytest_clone(test_create_gitops, test_create_repo):
-    g = test_create_gitops
-    r = test_create_repo
-    print(g)
-    print(r)
-    g.test_clone(
-        local_clone_path="/tmp/testclone",
-        url_path="https://github.com/bodleytunes/wizznet-cloud-salt.git",
-        repo=r,
-    )
-    assert g
 
 
 if __name__ == "__main__":

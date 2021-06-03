@@ -82,7 +82,7 @@ class GitOps(BaseGitOps):
                 return self.repo
             except Exception as e:
                 print(f"can't clone repo: {e}")
-                return
+                return False
         else:
             try:
                 # create new path
@@ -93,7 +93,7 @@ class GitOps(BaseGitOps):
             except Exception as e:
                 print(f"can't clone repo: {e}")
                 # now git pull instead?
-                return
+                return False
 
     def _build_clone_path(self, local_clone_path, clone_subpath) -> str:
 
