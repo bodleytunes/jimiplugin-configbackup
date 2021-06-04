@@ -5,7 +5,7 @@ class _configbackup(plugin._plugin):
     version = 0.6
 
     def install(self):
-        # Register batfish Models
+        # Register  Models
 
         model.registerModel(
             "cfgBackupConnect",
@@ -42,7 +42,7 @@ class _configbackup(plugin._plugin):
         return True
 
     def uninstall(self):
-        # de-register batfish Models
+        # de-register  Models
 
         model.deregisterModel(
             "cfgBackupConnect",

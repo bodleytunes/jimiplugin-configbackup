@@ -53,17 +53,13 @@ class GitOps(BaseGitOps):
 
     GIT_PROTO_GITEA: str = "http"
     GIT_PROTO_HTTPS: str = "https"
-    CLONE: bool = "False"
 
-    def __init__(self, args: GitArgs = None, CLONE: bool = None) -> None:
+    def __init__(self, args: GitArgs = None) -> None:
         super().__init__()
 
         self.args = args
-        self.CLONE = CLONE
 
-        if self.CLONE is False:
-            # dont run this if we are just running a clone
-            self._generate_url()
+        self._generate_url()
 
     pass
 

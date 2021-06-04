@@ -30,6 +30,11 @@ class _cfgBackupConnect(action._action):
 
     def doAction(self, data) -> dict:
 
+        # get event data strings
+        self.host = helpers.evalString(self.host, {"data": data["flowData"]})
+        self.device_hostname = helpers.evalString(
+            self.device_hostname, {"data": data["flowData"]}
+        )
         # setup base args
         connect_args = ConnectArgs(
             host=self.host,
@@ -175,7 +180,7 @@ class _cfgBackupSave(action._action):
         else:
             return {"result": False, "rc": 403, "msg": "No connection found"}
 
-    def setAttribute(self, attr, value, sessionData=None) -> super:
+    def setAttribute(self, attr, value, sessionData=None) -> bool:
         # set parent class session data
         return super(_cfgBackupSave, self).setAttribute(
             attr, value, sessionData=sessionData
@@ -255,7 +260,7 @@ class _cfgGitOps(action._action):
 
         return args
 
-    def setAttribute(self, attr, value, sessionData=None) -> super:
+    def setAttribute(self, attr, value, sessionData=None) -> bool:
         # set parent class session data
         return super(_cfgGitOps, self).setAttribute(
             attr, value, sessionData=sessionData
@@ -312,7 +317,7 @@ class _cfgGitClone(action._action):
             print(f"{e}")
             return git_path
 
-    def setAttribute(self, attr, value, sessionData=None) -> super:
+    def setAttribute(self, attr, value, sessionData=None) -> bool:
         # set parent class session data
         return super(_cfgGitClone, self).setAttribute(
             attr, value, sessionData=sessionData
